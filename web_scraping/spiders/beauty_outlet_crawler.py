@@ -2,7 +2,6 @@ import scrapy
 import json
 import re
 from web_scraping.items import BeautyOutletItem
-
 class BeautyOutletSpider(scrapy.Spider):
     name = "beauty_outlet_crawler"
     start_urls = ["https://www.beautyoutlet.co.uk"]
@@ -24,61 +23,44 @@ class BeautyOutletSpider(scrapy.Spider):
     def parse_product(self, response):
         products = response.xpath('//h3[@class="card__heading h5"]/a/@href').extract()
         yield from response.follow_all(products, callback=self.parse_variants)
-
+        
     def parse_variants(self, response):
         script_tag = response.xpath("//script[contains(text(), 'var meta = ')]/text()").get()
-        if script_tag:
-            pattern = re.compile(r'var meta = ({.*?});', re.DOTALL)
-            match = pattern.search(script_tag)
-            if match:
-                meta_json = match.group(1)
-                meta_data = json.loads(meta_json)
-                
-                for variant in meta_data.get('product', {}).get('variants', []):
-                    variant_id = variant.get('id')
-                    url = f"{response.url}?variant={variant_id}"
-                    
-                    base_data = {
-                        "url": url,
-                        #"description": self.clean_text(response.xpath('(//div[contains(@class, "product__description")]//text())[2]').getall()),
-                        "description": self.clean_text(response.xpath('(//div[contains(@class, "product__description")]//text())').getall()),
-                        "brand": response.xpath("//p[contains(@class,'product__text')]/strong/text()").get(),
-                        "hasVariations": bool(response.xpath('(//label[starts-with(@for,"template")]/text())[3]').get()),
-                        "isPriceExcVAT": "Taxes included" not in response.xpath("//div[contains(@class,'product__tax')]/text()").get(),
-                        "images": ["https:" + img for img in response.xpath("//div[contains(@class,'product__media')]/img/@src").extract()],
-                        "Title": variant.get('name', ''),
-                        #"Price": float(variant.get('price', 0)),
-                        "Mpn": int(variant.get('id', '')),
-                        "Sku": ', '.join([s.strip() for s in variant.get('sku', '').split(',') if s.strip()]),
-                        "Color": variant.get('public_title', '')
-                    }
-                    
-                    yield scrapy.Request(url, callback=self.product_information, meta={'base_data': base_data})
+        if not script_tag: return
+        pattern = re.compile(r'var meta = ({.*?});', re.DOTALL)
+        match = pattern.search(script_tag)
+        if not match: return
+        meta_json = match.group(1)
+        meta_data = json.loads(meta_json)
+        list_of_variants = meta_data.get('product', {}).get('variants', [])   
+        for variant in list_of_variants:
+            variant_id = variant.get('id')
+            url = f"{response.url}?variant={variant_id}"
+            yield scrapy.Request(url, callback=self.parse_details)
     
-    def product_information(self, response):
+    def parse_details(self, response):
         selected_variant = response.xpath("//script[@type='application/json' and @data-selected-variant]/text()").get()
         single_variant = response.xpath("(//script[@type='application/ld+json']/text())[2]").get()
         
         variant_data = json.loads(selected_variant) if selected_variant else json.loads(single_variant)
 
         item = BeautyOutletItem()
-        item['Url']= response.meta['base_data']['url']
-        item['Title']= response.meta['base_data']['Title']
-        item['Barcode']= variant_data.get('barcode', '')
-        item['Availability']= variant_data.get('available', False) if selected_variant else "InStock" in variant_data['offers']['availability']
-        #item['Price']= response.meta['base_data']['Price']
-        item['Price']= float(variant_data['offers']['price'])
-        item['hasVariations']= response.meta['base_data']['hasVariations']
-        item['isPriceExcVAT']= response.meta['base_data']['isPriceExcVAT']
-        item['Description']= response.meta['base_data']['description']
-        item['Brand']= response.meta['base_data']['brand']
-        item['Mpn']= response.meta['base_data']['Mpn']
-        item['Sku']= response.meta['base_data']['Sku']
-        item['Size']= ""
-        item['Color']= response.meta['base_data']['Color']
-        item['Offer']= ""
-        item['Image']= variant_data.get('featured_image', {}).get('src', '') if selected_variant else variant_data.get('image')
-        item['Images']= response.meta['base_data']['images']
+        item['Url'] = response.url
+        item['Title'] = response.xpath("//div[@class='product__title']/h1/text()").get()
+        item['Barcode'] = str(variant_data.get('barcode', '')) if selected_variant else str(variant_data.get('gtin', ''))
+        item['Availability'] = variant_data.get('available', False) if selected_variant else "InStock" in variant_data['offers']['availability']
+        item['Price'] = response.xpath("//meta[@property='og:price:amount']/@content").get()
+        item['hasVariations'] = bool(selected_variant)
+        item['isPriceExcVAT'] = "Taxes included" not in response.xpath("//div[contains(@class,'product__tax')]/text()").get()
+        item['Description'] = self.clean_text(response.xpath('(//div[contains(@class, "product__description")]//text())').getall())
+        item['Brand'] = response.xpath("//p[contains(@class,'product__text')]/strong/text()").get()
+        item['Mpn'] = ""
+        item['Sku'] = variant_data.get('sku','')
+        item['Size'] = ""
+        item['Color'] = response.xpath("//*[@checked and contains(@name,'Colo')]/@value").get(default="")
+        item['Offer'] = ""
+        item['Image'] = "https:" + response.xpath("(//div[contains(@class,'product__media')]/img/@src)[1]").get()
+        item['Images'] = ["https:" + img for img in response.xpath("(//div[contains(@class,'product__media')]/img/@src)[1]").extract()]
 
         yield item
 
@@ -89,5 +71,3 @@ class BeautyOutletSpider(scrapy.Spider):
         text = text.strip('/"').strip()
         text = text.replace('\\"', '')
         return text
-    
-
