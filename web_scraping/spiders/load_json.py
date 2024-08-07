@@ -1,9 +1,6 @@
 import scrapy
 import json
-from scrapy.crawler import CrawlerProcess
-
-
-class BeautyOutletSpider(scrapy.Spider):
+class check(scrapy.Spider):
     name = "check"
     start_urls = ["https://www.evanscycles.com/brand/hjc/atara-mt-gl-road-helmet-932079#colcode=93207916"]
     
@@ -22,11 +19,5 @@ class BeautyOutletSpider(scrapy.Spider):
         script_tag = response.xpath("//span[@class='ProductDetailsVariants hidden']/@data-variants").get()
         if script_tag:
             variants = json.loads(script_tag)
-            yield {'variants': variants}
+            yield  variants
 
-
-# To run the spider
-if __name__ == "__main__":
-    process = CrawlerProcess()
-    process.crawl(BeautyOutletSpider)
-    process.start()

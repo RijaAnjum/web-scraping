@@ -1,60 +1,80 @@
 import scrapy
-from web_scraping.spiders.utils import sanitize_json,safe_load_json
+from web_scraping.spiders.utils import sanitize_json,safe_load_json,barcode_type,clean_text
 from web_scraping.items import EvanscyclesCrawlerItem
-
 class Evanscycles_Crawler(scrapy.Spider):
     name = "evanscycles_crawler"
     start_urls = ["https://www.evanscycles.com/"]
 
     def parse(self, response):
-        major_categories = response.xpath("(//a[contains(@id,'lnkTopLevelMenu')]/@href)[position()<last()]").extract()
-        yield from response.follow_all(major_categories or '', callback=self.parse_sub_categories)
+        try:
+            major_categories = response.xpath("(//a[contains(@id,'lnkTopLevelMenu')]/@href)[position()<last()]").extract()
+            yield from response.follow_all(major_categories or '', callback=self.parse_sub_categories)
+        except:
+            print("Wrong url!!")
 
     def parse_sub_categories(self, response):
-        accessories = response.xpath("//h1[text()='ACCESSORIES']//following::a[text()='Shop All']/@href").get()
-        yield response.follow(accessories or '', callback=self.parse_pagination)
-        sub_categories = list(set(response.xpath("//div[@class='featCatInner']/a/@href").extract()))
-        yield from response.follow_all(sub_categories or '', callback=self.parse_pagination)
+        try:
+            sub_categories = list(set(response.xpath("//div[@class='featCatInner']/a/@href | //a[text()='Shop All' and contains(@href,'all')]/@href").extract()))
+            yield from response.follow_all(sub_categories or [response.url] , callback=self.parse_pagination)
+        except:
+            print("Issue in response in method parse_sub_categories!!") 
 
     def parse_pagination(self, response):
-        yield from self.parse_product(response)
-        next_page = response.xpath("//a[@class='swipeNextClick NextLink ' and @rel='next']/@href").get()
-        yield response.follow(next_page or '', callback=self.parse_pagination)
+        try:
+            yield from self.parse_product(response)
+            next_page = response.xpath("//a[contains(@class,'NextLink') and not(contains(@class,'Disable'))]/@href").get()
+            yield response.follow(next_page or '', callback=self.parse_pagination)
+        except:
+           print("Issue in pagination!!") 
 
     def parse_product(self, response):
-        products = response.xpath("//div[@class='s-producttext-top-wrapper']/a/@href").extract()
-        yield from response.follow_all(products or '', callback=self.parse_details)
+        try:
+            products = response.xpath("//div[contains(@class,'s-producttext')]/a/@href").extract()
+            yield from response.follow_all(products or '', callback=self.parse_details)
+        except:
+            print("Issue in response in method parse product!!")  
 
     def parse_details(self, response):
-        script_tag = sanitize_json(response.xpath("//script[@id='structuredDataLdJson']/text()").get())
-        script_tag2 = sanitize_json(response.xpath("//span[@class='ProductDetailsVariants hidden']/@data-variants").get())
+        selected_data = sanitize_json(response.xpath("//script[@id='structuredDataLdJson']/text()").get())
+        selected_variant = sanitize_json(response.xpath("//span[@class='ProductDetailsVariants hidden']/@data-variants").get())
+        try:
+            data_list = safe_load_json(selected_data) or []
+            variant_list = safe_load_json(selected_variant) or []
 
-        variants = safe_load_json(script_tag) or []
-        variants2 = safe_load_json(script_tag2) or []
+            variant_dict = {}
+            for variant in variant_list:
+                for size in variant.get('SizeVariants', []):
+                    sku_variant = size.get('SizeVarId', '')
+                    variant_dict[sku_variant] = {
+                        'Size': size.get('SizeName', ''),
+                        'Color': variant.get('ColourName', ''),
+                        'Image': variant.get('MainImageDetails', {}).get('ImgUrlXXLarge', ''),
+                        'Images': [img.get('ImgUrlXXLarge', '') for img in variant.get('ProdImages', {}).get('AlternateImages', [])]
+                    }
+    
+            for data in data_list:
+                for offer in data.get('offers', []):
+                    sku = offer.get('sku', '')
+                    item = EvanscyclesCrawlerItem()
+                    item['sku'] = sku
+                    item['Url'] = f"{response.url}?ah={sku}"
+                    item['Brand'] = data.get('brand', '')
+                    item['Price'] = float(offer.get('price', ''))
+                    item['Availability'] = "InStock" in offer.get('availability', '')
+                    item['Barcode'] = str(data.get('gtin13', ''))
+                    item['BarcodeType'] = barcode_type(str(data.get('gtin13', '')))
+                    item['Description'] = clean_text(str(data.get('description', '')))
+                    item['Title'] = data.get('name', '')
+                    item['hasVariations'] = len(data.get('offers', [])) > 1
+                    item['isPriceExcVAT'] = False
+                    item['mpn'] = ""
+                    item['Offer'] = ""
+                    variant = variant_dict.get(sku)
+                    item['Size'] = variant['Size']
+                    item['Color'] = variant['Color']
+                    item['Image'] = variant['Image']
+                    item['Images'] = variant['Images']
 
-        item = EvanscyclesCrawlerItem()
-        for variant2 in variants2:
-            for size in variant2.get('SizeVariants', []):
-                item['sku'] = size.get('SizeVarId', '')
-                item['Size'] = size.get('SizeName', '')
-                item['Color'] = variant2.get('ColourName', '')
-                item['Image'] = variant2.get('MainImageDetails', {}).get('ImgUrlXXLarge', '')
-                item['Images'] = [img.get('ImgUrlXXLarge', '') for img in variant2.get('ProdImages', {}).get('AlternateImages', [])]
-
-        for variant in variants:
-            for offer in variant.get('offers', []):
-                sku2 = offer.get('sku', '')
-                item['Url'] = f"{response.url}?ah={sku2}"
-                item['Brand'] = variant.get('brand', '')
-                item['Price'] = float(offer.get('price', ''))
-                item['Availability'] = "InStock" in offer.get('availability', '')
-                item['Barcode'] = str(variant.get('gtin13', ''))
-                item['Description'] = str(variant.get('description', ''))
-                item['Title'] = variant.get('name', '')
-                item['hasVariations'] = len(variant.get('offers', [])) > 1
-                item['isPriceExcVAT'] = ""
-                item['mpn'] = ""
-                item['Offer'] = ""
-        yield item
-
-
+                    yield item    
+        except:
+            print("issue in parse details!!")

@@ -19,15 +19,15 @@ NEWSPIDER_MODULE = "web_scraping.spiders"
 ROBOTSTXT_OBEY = False
 DOWNLOADER_MIDDLEWARES = {
     #'web_scraping.middlewares.CustomMiddleware': 543,
-    #'scrapy_user_agents.middlewares.RandomUserAgentMiddleware': 400,
+    #'web_scraping.middlewares.RandomUserAgentMiddleware': 400,
     'web_scraping.middlewares.MyProxyMiddleware': 543,
-    #'scrapy.downloadermiddlewares.httpproxy.HttpProxyMiddleware': 110,
+    'scrapy.downloadermiddlewares.httpproxy.HttpProxyMiddleware': 110,
+    'web_scraping.middlewares.CustomRetryMiddleware': 550,
 }
 
 RETRY_ENABLED = True
 RETRY_TIMES = 3  # Number of retries (default: 2)
 RETRY_HTTP_CODES = [500, 502, 503, 504, 522, 524, 408, 429]
-DOWNLOAD_TIMEOUT = 15  
 
 DEFAULT_REQUEST_HEADERS = {
     'Accept-Language': 'en',

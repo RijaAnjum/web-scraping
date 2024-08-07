@@ -32,6 +32,7 @@ class EvanscyclesCrawlerItem(scrapy.Item):
     sku= scrapy.Field()
     Availability= scrapy.Field()
     Barcode= scrapy.Field()
+    BarcodeType=scrapy.Field()
     Description= scrapy.Field()
     Title= scrapy.Field()
     hasVariations= scrapy.Field()

@@ -9,8 +9,8 @@ from random import randint
 import os
 from random import choice
 from web_scraping.spiders.constants import UK_PROXIES 
-# useful for handling different item types with a single interface
 from itemadapter import is_item, ItemAdapter
+from scrapy.downloadermiddlewares.retry import RetryMiddleware
 
 
 class WebScrapingSpiderMiddleware:
@@ -118,6 +118,13 @@ class CustomMiddleware:
 
     def spider_opened(self, spider):
         spider.logger.info("Spider opened: %s" % spider.name)
+
+
+class CustomRetryMiddleware(RetryMiddleware):
+    def process_exception(self, request, exception, spider):
+        print("RETRIESSSSSSSSSSSSS")
+        return super().process_exception(request, exception, spider)
+
 
 class RandomUserAgentMiddleware:
     USER_AGENTS_FILE = os.path.join(os.path.dirname(__file__), 'spiders', 'user_agents.txt')

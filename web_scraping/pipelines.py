@@ -17,7 +17,7 @@ class CsvWriterPipeline:
         self.file = open('evanscycles_data.csv', 'w', newline='', encoding='utf-8')
         self.writer = csv.DictWriter(self.file, fieldnames=[
             'Url', 'Brand', 'Price', 'sku', 'Availability',
-            'Barcode', 'Description', 'Title', 'hasVariations',
+            'Barcode','BarcodeType', 'Description', 'Title', 'hasVariations',
             'isPriceExcVAT', 'mpn', 'Offer', 'Size','Color', 'Image', 'Images'
         ])
         self.writer.writeheader()
