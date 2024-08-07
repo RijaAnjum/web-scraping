@@ -12,14 +12,25 @@ BOT_NAME = "web_scraping"
 SPIDER_MODULES = ["web_scraping.spiders"]
 NEWSPIDER_MODULE = "web_scraping.spiders"
 
-
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
 #USER_AGENT = "web_scraping (+http://www.yourdomain.com)"
 
 # Obey robots.txt rules
-ROBOTSTXT_OBEY = True
+ROBOTSTXT_OBEY = False
 DOWNLOADER_MIDDLEWARES = {
-    'web_scraping.middlewares.CustomMiddleware': 543,
+    #'web_scraping.middlewares.CustomMiddleware': 543,
+    #'scrapy_user_agents.middlewares.RandomUserAgentMiddleware': 400,
+    'web_scraping.middlewares.MyProxyMiddleware': 543,
+    #'scrapy.downloadermiddlewares.httpproxy.HttpProxyMiddleware': 110,
+}
+
+RETRY_ENABLED = True
+RETRY_TIMES = 3  # Number of retries (default: 2)
+RETRY_HTTP_CODES = [500, 502, 503, 504, 522, 524, 408, 429]
+DOWNLOAD_TIMEOUT = 15  
+
+DEFAULT_REQUEST_HEADERS = {
+    'Accept-Language': 'en',
 }
 # Configure maximum concurrent requests performed by Scrapy (default: 16)
 #CONCURRENT_REQUESTS = 32

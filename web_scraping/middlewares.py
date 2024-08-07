@@ -4,7 +4,11 @@
 # https://docs.scrapy.org/en/latest/topics/spider-middleware.html
 
 from scrapy import signals
-
+import requests
+from random import randint
+import os
+from random import choice
+from web_scraping.spiders.constants import UK_PROXIES 
 # useful for handling different item types with a single interface
 from itemadapter import is_item, ItemAdapter
 
@@ -114,3 +118,42 @@ class CustomMiddleware:
 
     def spider_opened(self, spider):
         spider.logger.info("Spider opened: %s" % spider.name)
+
+class RandomUserAgentMiddleware:
+    USER_AGENTS_FILE = os.path.join(os.path.dirname(__file__), 'spiders', 'user_agents.txt')
+
+    def get_user_agents(file_path):
+        with open(file_path, 'r') as f:
+            user_agents = [line.strip() for line in f.readlines() if line.strip()]
+        return user_agents
+    
+    USER_AGENTS = get_user_agents(USER_AGENTS_FILE)
+
+    def get_random_user_agent(self, USER_AGENTS):
+        random_index=randint(0, len(USER_AGENTS)-1)
+        return self.USER_AGENTS[random_index]
+
+    def process_request(self, request,spider):
+        random_user_agent=self.get_random_user_agent()  
+        request.headers['User-Agent'] = random_user_agent
+
+        print("************  new header attched ***************")
+        print(request.headers['User-Agent'])
+
+
+
+class MyProxyMiddleware:
+   
+    def __init__(self):
+        self.proxies = UK_PROXIES
+
+    def get_random_proxy(self):
+        return choice(self.proxies)
+
+    def process_request(self, request, spider):
+        proxy = self.get_random_proxy()
+        proxy_str = f"http://{proxy['username']}:{proxy['password']}@{proxy['host']}:{proxy['port']}"
+        request.meta['proxy'] = proxy_str
+        
+        print("************  new proxy attached ***************")
+        print(request.meta['proxy'])   

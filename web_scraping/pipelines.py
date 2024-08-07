@@ -14,11 +14,11 @@ class WebScrapingPipeline:
 
 class CsvWriterPipeline:
     def __init__(self):
-        self.file = open('beauty_outlet_crawler.csv', 'w', newline='', encoding='utf-8')
+        self.file = open('evanscycles_data.csv', 'w', newline='', encoding='utf-8')
         self.writer = csv.DictWriter(self.file, fieldnames=[
-            'Url', 'Title', 'Barcode', 'Availability', 'Price',
-            'hasVariations', 'isPriceExcVAT', 'Description', 'Brand',
-            'Mpn', 'Sku', 'Size', 'Color', 'Offer', 'Image', 'Images'
+            'Url', 'Brand', 'Price', 'sku', 'Availability',
+            'Barcode', 'Description', 'Title', 'hasVariations',
+            'isPriceExcVAT', 'mpn', 'Offer', 'Size','Color', 'Image', 'Images'
         ])
         self.writer.writeheader()
 

@@ -22,3 +22,23 @@ class BeautyOutletItem(scrapy.Item):
     Offer = scrapy.Field()
     Image = scrapy.Field()
     Images = scrapy.Field()
+
+
+
+class EvanscyclesCrawlerItem(scrapy.Item):
+    Url= scrapy.Field()
+    Brand= scrapy.Field()
+    Price= scrapy.Field()
+    sku= scrapy.Field()
+    Availability= scrapy.Field()
+    Barcode= scrapy.Field()
+    Description= scrapy.Field()
+    Title= scrapy.Field()
+    hasVariations= scrapy.Field()
+    isPriceExcVAT= scrapy.Field()
+    mpn= scrapy.Field()
+    Offer= scrapy.Field()
+    Size= scrapy.Field()
+    Color= scrapy.Field()
+    Image = scrapy.Field()
+    Images= scrapy.Field()
