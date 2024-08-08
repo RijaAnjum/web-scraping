@@ -1,6 +1,7 @@
 import scrapy
 from web_scraping.spiders.utils import sanitize_json,safe_load_json,barcode_type,clean_text
 from web_scraping.items import EvanscyclesCrawlerItem
+
 class Evanscycles_Crawler(scrapy.Spider):
     name = "evanscycles_crawler"
     start_urls = ["https://www.evanscycles.com/"]
@@ -58,7 +59,6 @@ class Evanscycles_Crawler(scrapy.Spider):
                     sku = offer.get('sku', '')
                     item = EvanscyclesCrawlerItem()
                     item['sku'] = sku
-                    #item['Url'] = f"{response.url}?ah={sku}"
                     item['Brand'] = clean_text(data.get('brand', ''))
                     item['Price'] = float(offer.get('price', ''))
                     item['Availability'] = "InStock" in offer.get('availability', '')
