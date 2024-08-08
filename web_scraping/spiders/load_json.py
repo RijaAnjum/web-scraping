@@ -19,5 +19,5 @@ class check(scrapy.Spider):
         script_tag = response.xpath("//span[@class='ProductDetailsVariants hidden']/@data-variants").get()
         if script_tag:
             variants = json.loads(script_tag)
-            yield  variants
+            yield  {"variants" :variants }
 

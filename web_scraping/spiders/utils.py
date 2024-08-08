@@ -1,6 +1,6 @@
 import json
 import re
-import pdb
+
 def sanitize_json(data):
     if data:
         return re.sub(r'[\x00-\x1f\x7f-\x9f]', ' ', data)
@@ -10,7 +10,6 @@ def safe_load_json(data):
     try:
         return json.loads(sanitize_json(data))
     except json.JSONDecodeError as e:
-        pdb.set_trace()
         return []
     
 def clean_text(text):
@@ -28,4 +27,4 @@ def barcode_type(string):
     elif  length == 12 or length == 11:
         return "UPC"
     elif length == 14:
-        return "gtin"
+        return "GTIN"

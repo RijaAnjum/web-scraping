@@ -10,14 +10,14 @@ class Evanscycles_Crawler(scrapy.Spider):
             major_categories = response.xpath("(//a[contains(@id,'lnkTopLevelMenu')]/@href)[position()<last()]").extract()
             yield from response.follow_all(major_categories or '', callback=self.parse_sub_categories)
         except:
-            print("Wrong url!!")
+            print("Wrong starting url!!")
 
     def parse_sub_categories(self, response):
         try:
             sub_categories = list(set(response.xpath("//div[@class='featCatInner']/a/@href | //a[text()='Shop All' and contains(@href,'all')]/@href").extract()))
             yield from response.follow_all(sub_categories or [response.url] , callback=self.parse_pagination)
         except:
-            print("Issue in response in method parse_sub_categories!!") 
+            print("Exception in method parse_sub_categories!!") 
 
     def parse_pagination(self, response):
         try:
@@ -25,14 +25,14 @@ class Evanscycles_Crawler(scrapy.Spider):
             next_page = response.xpath("//a[contains(@class,'NextLink') and not(contains(@class,'Disable'))]/@href").get()
             yield response.follow(next_page or '', callback=self.parse_pagination)
         except:
-           print("Issue in pagination!!") 
+           print("Exception in pagination!!") 
 
     def parse_product(self, response):
         try:
             products = response.xpath("//div[contains(@class,'s-producttext')]/a/@href").extract()
             yield from response.follow_all(products or '', callback=self.parse_details)
         except:
-            print("Issue in response in method parse product!!")  
+            print("Exception in method parse product!!")  
 
     def parse_details(self, response):
         selected_data = sanitize_json(response.xpath("//script[@id='structuredDataLdJson']/text()").get())
@@ -48,6 +48,7 @@ class Evanscycles_Crawler(scrapy.Spider):
                     variant_dict[sku_variant] = {
                         'Size': size.get('SizeName', ''),
                         'Color': variant.get('ColourName', ''),
+                        'Color_id':variant.get('ColVarId', ''),
                         'Image': variant.get('MainImageDetails', {}).get('ImgUrlXXLarge', ''),
                         'Images': [img.get('ImgUrlXXLarge', '') for img in variant.get('ProdImages', {}).get('AlternateImages', [])]
                     }
@@ -57,14 +58,14 @@ class Evanscycles_Crawler(scrapy.Spider):
                     sku = offer.get('sku', '')
                     item = EvanscyclesCrawlerItem()
                     item['sku'] = sku
-                    item['Url'] = f"{response.url}?ah={sku}"
-                    item['Brand'] = data.get('brand', '')
+                    #item['Url'] = f"{response.url}?ah={sku}"
+                    item['Brand'] = clean_text(data.get('brand', ''))
                     item['Price'] = float(offer.get('price', ''))
                     item['Availability'] = "InStock" in offer.get('availability', '')
-                    item['Barcode'] = str(data.get('gtin13', ''))
+                    item['Barcode'] = str(data.get('gtin13', '')) if data.get('gtin13','').isdigit() else ''
                     item['BarcodeType'] = barcode_type(str(data.get('gtin13', '')))
                     item['Description'] = clean_text(str(data.get('description', '')))
-                    item['Title'] = data.get('name', '')
+                    item['Title'] = clean_text(data.get('name', ''))
                     item['hasVariations'] = len(data.get('offers', [])) > 1
                     item['isPriceExcVAT'] = False
                     item['mpn'] = ""
@@ -74,7 +75,8 @@ class Evanscycles_Crawler(scrapy.Spider):
                     item['Color'] = variant['Color']
                     item['Image'] = variant['Image']
                     item['Images'] = variant['Images']
+                    item['Url'] = f"{response.url}#colcode={ variant['Color_id']}"
 
                     yield item    
         except:
-            print("issue in parse details!!")
+            print("Exception in parse details!!")
